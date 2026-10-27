@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://a29108063.github.io/guard-on-duty/sitemap.xml
