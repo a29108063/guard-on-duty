@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>保全值勤中！</title>
+<style>
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#1d2433;font-family:"PingFang TC","Microsoft JhengHei","Noto Sans CJK TC","Noto Sans TC",sans-serif;color:#fff;touch-action:none}
+#c{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
+.ov{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,20,35,.82);z-index:10;padding:12px}
+.ov.on{display:flex}
+.card{background:#fdf6e3;color:#2b2b2b;border-radius:14px;padding:18px 20px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 8px 30px #0008;border:4px solid #3b6ea8}
+.card h1{margin:0 0 6px;font-size:34px;color:#264f80;text-align:center}
+.card h2{margin:0 0 8px;font-size:22px;color:#264f80}
+.card p{margin:6px 0;line-height:1.5}
+button{font:inherit;font-size:17px;border:0;border-radius:10px;padding:10px 14px;margin:5px 0;background:#3b6ea8;color:#fff;cursor:pointer;width:100%;text-align:left}
+button:hover{background:#2c5585}button.alt{background:#7a8699}button:disabled{background:#bbb;color:#666}
+.lv{display:flex;justify-content:space-between}
+#hud{position:absolute;left:0;right:0;top:0;display:none;z-index:5;pointer-events:none;padding:6px;font-size:14px}
+#hud.on{display:block}
+.bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pill{background:#000a;border-radius:8px;padding:4px 8px}
+.m{display:inline-block;width:60px;height:8px;background:#444;border-radius:4px;vertical-align:middle;overflow:hidden}.m i{display:block;height:100%}
+#tasks{background:#000a;border-radius:8px;padding:4px 8px;margin-top:4px;max-width:250px;font-size:13px}
+#tasks div{margin:2px 0}
+#hudBtns{position:absolute;right:6px;top:6px;display:flex;gap:6px;pointer-events:auto}
+#hudBtns button{width:auto;padding:6px 10px;font-size:14px;margin:0}
+#prompt{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#000c;padding:6px 12px;border-radius:8px;display:none;z-index:5;font-size:15px;white-space:nowrap}
+#toast{position:absolute;left:50%;top:30%;transform:translateX(-50%);background:#264f80ee;padding:8px 14px;border-radius:10px;display:none;z-index:6;font-size:16px;text-align:center;max-width:90%}
+#joy{position:absolute;left:20px;bottom:20px;width:130px;height:130px;border-radius:50%;background:#fff2;border:2px solid #fff5;display:none;z-index:6}
+#knob{position:absolute;left:40px;top:40px;width:50px;height:50px;border-radius:50%;background:#fff8}
+#act{position:absolute;right:24px;bottom:34px;width:90px;height:90px;border-radius:50%;background:#e8a33bcc;display:none;z-index:6;font-size:20px;text-align:center;line-height:90px;font-weight:bold}
+
+@media (orientation:portrait){#hud{font-size:12px;padding:4px}.bar{padding-right:118px}.pill{padding:3px 6px}.m{width:42px}#tasks{position:fixed;left:4px;right:4px;bottom:4px;max-width:none;font-size:12px;max-height:104px;overflow:hidden}#prompt{bottom:112px;font-size:13px}#hudBtns{top:4px;right:4px}}
+.leg{font-size:12px;opacity:.9}.r{color:#ff5252}.y{color:#ffd600}.g{color:#ddd}
+table{width:100%;border-collapse:collapse;font-size:14px}td{padding:3px;border-bottom:1px solid #ddd}
+.grade{font-size:64px;text-align:center;font-weight:bold;color:#c0392b;margin:0}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud"><div class="bar"><span class="pill" id="clock"></span><span class="pill">住戶滿意 <span class="m"><i id="mS" style="background:#4caf50"></i></span></span><span class="pill">管委會 <span class="m"><i id="mC" style="background:#2196f3"></i></span></span><span class="pill">精神 <span class="m"><i id="mE" style="background:#ff9800"></i></span></span></div><div id="tasks"></div><div class="pill leg" id="leg" style="display:inline-block;margin-top:4px"><span class=r>●</span>緊急 <span class=y>●</span>一般 <span class=g>●</span>低｜住戶優先</div>
+<div id="hudBtns"><button id="bSnd">🔇</button><button id="bPause">⏸ 暫停</button></div></div>
+<div id="prompt"></div><div id="saved" style="position:absolute;right:8px;bottom:8px;background:#2e7d32dd;padding:4px 10px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .4s;z-index:7;pointer-events:none">💾 已自動儲存</div><div id="toast"></div>
+
+<div class="ov on" id="ovTitle"><div class="card"><h1 id="tTitle"></h1><p style="text-align:center">在台灣當保全的一天：訪客、包裹、外送、車道、巡邏、阿伯住戶……<br>任務沒有時間限制，重點是<b>處理得對不對</b>。</p>
+<button id="bCont" style="display:none;background:#2e7d32"></button><button id="bStart">▶ 新遊戲（選擇關卡）</button><button class="alt" id="bHow">📋 怎麼玩</button></div></div>
+<div class="ov" id="ovConfirm"><div class="card"><h2>開始新遊戲？</h2><p>目前進行中的關卡進度會被清除（已解鎖關卡與最佳成績會保留）。</p><button id="bNewYes">確定，重新開始</button><button class="alt" id="bNewNo">取消</button></div></div>
+<div class="ov" id="ovHow"><div class="card"><h2>怎麼玩</h2>
+<p>🕹 移動：WASD / 方向鍵，或<b>點擊地圖</b>走過去；手機直接點地圖。</p><p>✋ 處理：靠近「!」按 E／空白鍵；或直接<b>點人物／驚嘆號</b>，會自動走過去處理。</p><p>🚦 輕重緩急：<b style="color:#c62828">紅色！＝緊急</b>（電梯受困、住戶跌倒、可疑人士、生氣住戶）、<b style="color:#b8860b">黃色！＝一般</b>、<b style="color:#777">灰色！＝低</b>（巡邏、燈管、便當）。<b>住戶優先於外人</b>（外送、推銷）。紅色事件等待時，你每走一步住戶滿意度都會下降；先做低優先事會扣分。</p><p>🔥 滿意度或管委會評價歸零、或在緊急狀況下把詐騙集團放進來 → 當場被開除！</p>
+<p>📋 每件任務<b>不計時</b>，依照處理方式（程序是否正確、態度是否得體）給評分，影響<b>住戶滿意度</b>與<b>管委會評價</b>。</p>
+<p>😪 精神會隨工作下降，記得回崗位（警衛室／櫃台）吃便當。</p><p>💾 每處理完一件事會自動儲存，關掉網頁後可從標題畫面「繼續遊戲」。</p><p>🏁 全部任務處理完回該棟的崗位（警衛室、大廳櫃台…）「下班」，看交班報告。玩完一關就解鎖下一關。</p>
+<button id="bHowBack">知道了</button></div></div>
+<div class="ov" id="ovLevels"><div class="card"><h2>選擇關卡</h2><div id="lvList"></div><button class="alt" id="bLvBack">返回</button></div></div>
+<div class="ov" id="ovModal"><div class="card"><h2 id="mdT"></h2><p id="mdP"></p><div id="mdB"></div></div></div>
+<div class="ov" id="ovPause"><div class="card"><h2>暫停中</h2><p>主任說可以休息一下（但別睡著）。</p><button id="bResume">繼續值班</button><button class="alt" id="bQuit">回到關卡選單</button></div></div>
+<div class="ov" id="ovFired"><div class="card" style="border-color:#c0392b"><h1 style="color:#c0392b">你被開除了 😱</h1><p style="text-align:center;font-size:40px;margin:0">👨‍💼📄</p><p id="fireWhy"></p><button id="bRetry">再給我一次機會（重玩本關）</button><button class="alt" id="bFireMenu">回關卡選單</button></div></div>
+<div class="ov" id="ovReport"><div class="card" id="report"></div></div>
+<script>
+"use strict";
+const CONFIG={title:"保全值勤中！",playerSpeed:150,maxActive:3};
+// 每個關卡：獨立地圖 map、獨立事件 q
+const STAGES=[
+{id:"1-1",w:1,bld:"一般社區",name:"新人報到",night:false,max:2,q:["visitor","pkgIn","patrol:P1","car","elder","sales","food","pickup","trash","garden","patrol:P2"]},
+{id:"1-2",w:1,bld:"電梯大樓",name:"週末午後",night:false,max:3,q:["mbox","pkgIn","moveIn","noise","petElev","parkB1","pickup","trashRoom","fakeRel","leak","bento","elevator","patrol:P1","patrol:P3"]},
+{id:"1-3",w:1,bld:"豪宅",name:"VIP 夜班",night:true,max:3,q:["valet","vipGuest","pkgLux","concierge","paparazzi","club","tailgate","privElev","gymHurt","fakeRepair","patrol:P1","patrol:P2"]}];
+const STAGES2=[
+{id:"2-1",w:2,bld:"商辦大樓",name:"上班尖峰",night:false,max:3,q:["nocard","w2visitor","rush","pkgIn","food","boss","interview","pickup","smoke","vendor","patrol:P1"]},
+{id:"2-2",w:2,bld:"商辦大樓",name:"大型發表會",night:false,max:3,q:["meeting","press","vipCar","stageLoad","spy","parkfee","lostBadge","cctvSusp","protest","bento","patrol:P2"]},
+{id:"2-3",w:2,bld:"商辦大樓",name:"深夜加班族",night:true,max:3,q:["overtime","sideDoor","server","nightFood","alarm","sleeper","fakeIT","blackout","roof","overtime","patrol:P1","patrol:P3"]}];
+const ALL=STAGES.concat(STAGES2);
+const WNAME={1:"住宅",2:"商辦大樓"},WNUM={1:"一",2:"二",3:"三",4:"四",5:"五"};
+const WORLDS=[[3,"百貨公司"],[4,"醫院"],[5,"工地／科學園區"]];
+const SAVE_KEY="guardgame_save_v2";
+let save={cleared:{},best:{}};try{Object.assign(save,JSON.parse(localStorage.getItem(SAVE_KEY)||"{}"))}catch(e){}
+function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch(e){}}
+document.title=CONFIG.title;$("tTitle").textContent="🛡 "+CONFIG.title;
+function $(id){return document.getElementById(id)}
+let RNGf=Math.random;function seeded(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function nextSeed(){G.rs=(Math.imul(G.rs,1664525)+1013904223)>>>0;return G.rs}
+function rnd(a){return a[Math.floor(RNGf()*a.length)]}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(RNGf()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+// ---- audio ----
+let AC=null,sound=false;
+function beep(f=660,d=.08,type="square",v=.05){if(!sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.stop(AC.currentTime+d+.02)}catch(e){}}
+$("bSnd").onclick=()=>{sound=!sound;$("bSnd").textContent=sound?"🔊":"🔇";beep(880)};
+// ---- maps (each stage has its own) ----
+const W=960,H=600;
+// r: [x,y,w,h,color,label,labelColor,solid(1)]
+const WALL=[[0,0,W,14],[0,0,14,545],[W-14,0,14,545],[0,537,W,8]];
+const MAPS={
+"1-1":{post:"警衛室",boss:"總幹事",bg:"#cfe3b0",bg2:"#c6dca6",nm:{elev:"C棟電梯",court:"中庭",light:"地下室燈管"},
+ units:{A:["A棟3F","A棟5F","A棟7F"],B:["B棟2F","B棟6F","B棟9F"],C:["C棟4F","C棟8F","C棟11F"]},gl:{A:"A 棟格",B:"B 棟格",C:"C 棟格"},
+ r:[[380,150,290,140,"#a8d08d","中庭","#2d5a1d"],[330,400,250,137,"#d9cbb0"],[590,400,90,137,"#888"],[700,300,110,100,"#777","停車場坡道"],[20,440,100,70,"#9aa79a","垃圾區"],[370,525,80,12,"#bfa77a"],
+  [30,20,210,110,"#e8b4a0","A棟","#333",1],[370,20,210,95,"#a0c4e8","B棟","#333",1],[720,20,210,110,"#e8d6a0","C棟","#333",1],[290,300,150,90,"#f0e6d2","大廳 Lobby","#555",1],[140,440,140,70,"#d7c7e8","包裹室","#333",1],[440,450,100,55,"#4a6fa5","警衛室","#fff",1]],
+ trees:[[420,190],[630,250],[520,210],[300,200],[860,250]],cars:[[730,420],[770,420]],barrier:[595,520],gate:[370,537,80],
+ spot:{gate:[410,515],counter:[490,430],barrier:[620,500],mail:[210,425],garbage:[70,425],lobby:[365,405],court:[520,250],A:[135,145],B:[475,130],C:[825,145],garage:[760,380],P1:[60,200],P2:[880,330],P3:[260,250],P4:[650,140]}},
+"1-2":{post:"大廳櫃台",boss:"總幹事",bg:"#ebe5d6",bg2:"#e2dbc9",nm:{elev:"2號電梯",court:"交誼廳",light:"B1 燈管"},
+ units:{A:["3F-1","5F-2","7F-3"],B:["10F-1","12F-2","14F-1"],C:["18F-2","21F-1","23F-3"]},gl:{A:"低樓層 3–7F 格",B:"中樓層 10–14F 格",C:"高樓層 18–23F 格"},
+ r:[[90,20,210,190,"#e8d9b5","交誼廳","#7a5a2a"],[700,250,246,287,"#7a7a7a","B1 停車場坡道","#fff"],[440,530,80,7,"#8fd3ff"],
+  [330,14,300,90,"#9aa4ad","電梯廳","#222",1],[660,14,90,90,"#8d6e63","安全梯","#fff",1],[800,14,146,100,"#7a8f7a","垃圾／回收間","#fff",1],[14,120,50,200,"#b8860b","信箱","#fff",1],[130,60,120,30,"#a0522d","沙發","#fff",1],
+  [120,400,150,70,"#d7c7e8","包裹室","#333",1],[410,430,140,40,"#5b4636","大廳櫃台","#fff",1],[560,250,28,28,"#bbb",null,null,1],[380,250,28,28,"#bbb",null,null,1]],
+ elevs:[[345,30],[415,30],[485,30],[555,30]],cars:[[760,340],[820,340],[880,420]],barrier:[740,515],gate:[440,537,80],
+ spot:{gate:[480,515],counter:[480,412],barrier:[780,505],garage:[840,300],mail:[195,385],mbox:[95,220],garbage:[870,135],lobby:[300,320],court:[195,130],A:[705,125],B:[400,125],C:[540,125],P1:[40,60],P2:[910,200],P3:[640,330],P4:[300,500]}},
+"1-3":{post:"禮賓接待櫃台",boss:"總幹事",bg:"#d9d2c3",bg2:"#d0c8b6",nm:{elev:"A戶私人電梯",court:"會所泳池邊",light:"車庫燈"},
+ units:{A:["A1 頂層戶","A2 戶","A3 戶"],B:["B1 戶","B2 戶","B3 戶"],C:["C1 戶","C2 戶","C3 戶"]},gl:{A:"A 棟禮賓櫃",B:"B 棟禮賓櫃",C:"C 棟禮賓櫃"},
+ r:[[300,150,360,300,"#f6f1e7"],[690,180,256,357,"#8a8a8a","落客迴車道","#fff"],[14,170,280,60,"#b9d7a8"],[380,525,60,12,"#c9a227"],
+  [30,30,250,120,"#4fc3f7","恆溫泳池","#fff",1],[690,20,250,110,"#b0bec5","會所健身房","#333",1],[330,20,90,80,"#c9a227","A戶電梯","#333",1],[540,20,90,80,"#c9a227","B戶電梯","#333",1],
+  [150,250,120,90,"#d8c3a5","訪客等候室","#333",1],[30,380,130,70,"#d7c7e8","禮賓收發室","#333",1],[420,380,140,36,"#3b2f2f","禮賓接待櫃台","#ffd27a",1],[760,330,90,70,"#81d4fa","噴水池","#035",1]],
+ chand:[480,250],trees:[[60,200],[250,200],[680,160]],cars:[[720,250]],barrier:[690,520],gate:[380,537,60],
+ spot:{gate:[410,515],barrier:[720,500],valet:[800,440],counter:[490,360],lobby:[380,250],court:[150,180],A:[375,125],B:[585,125],gym:[815,150],garage:[900,250],mail:[95,470],P1:[230,200],P2:[910,200],P3:[620,300],P4:[200,480]}},
+"2-1":{post:"大廳櫃台",boss:"物業經理",bg:"#b7c4b0",nm:{elev:"電梯廳",court:"大廳",light:"大廳燈"},
+ units:{A:["3F 律師事務所","5F 會計師事務所","8F 貿易公司"],B:["12F 科技公司","15F 保險公司","16F 設計公司"],C:["20F 外商公司","22F 證券公司","25F 董事長室"]},gl:{A:"低樓層 3–8F 格",B:"中樓層 12–16F 格",C:"高樓層 20–25F 格"},
+ r:[[200,150,740,387,"#ece6da"],[20,150,160,387,"#7d7d7d","B1–B2 停車場","#fff"],[760,20,180,110,"#9cc58a","吸菸區","#2d5a1d"],[760,430,180,107,"#c9c9c9","卸貨區","#333"],[200,20,200,110,"#d7b899","☕ 咖啡店","#5a3a1a"],[430,530,100,7,"#8fd3ff"],
+  [380,190,200,60,"#9aa4ad","電梯","#333",1],[600,190,80,60,"#8d6e63","頂樓樓梯","#fff",1],[220,290,130,70,"#2c3e50","監控室","#fff",1],[220,400,130,50,"#b03a2e","消防總機","#fff",1],[720,320,140,70,"#d7c7e8","收發室","#333",1],[420,440,120,40,"#5b4636","大廳櫃台","#fff",1],[230,40,140,26,"#8b5a2b",null,null,1]],
+ gates:[375,296,6],elevs:[[392,200],[440,200],[488,200],[536,200]],cctv:[232,302],barrier:[60,345],gate:[430,537,100],
+ spot:{gate:[480,515],counter:[480,425],gates:[480,315],elev:[480,265],mail:[790,405],cctv:[285,375],fire:[285,465],dock:[850,490],barrier:[100,330],smoke:[850,90],roof:[640,265],cafe:[300,140],P1:[250,170],P2:[900,200],P3:[700,470],P4:[60,100]}},
+"2-2":{post:"大廳櫃台",boss:"物業經理",bg:"#c9c2d6",bg2:"#c0b8ce",nm:{elev:"電梯",court:"會議廳前廣場",light:"舞台燈"},
+ units:{A:["5F 公關公司","7F 行銷公司","9F 媒體公司"],B:["12F 科技公司（主辦）","15F 新創","16F 設計公司"],C:["20F 外商公司","22F 證券公司","25F 董事長室"]},gl:{A:"低樓層格",B:"中樓層格",C:"高樓層格"},
+ r:[[14,14,220,130,"#9cc58a","戶外吸菸區","#2d5a1d"],[560,300,160,90,"#ffe0b2","媒體區","#7a4a00"],[760,300,186,237,"#7d7d7d","B1 停車場","#fff"],[560,420,170,117,"#c9c9c9","設備卸貨區","#333"],[440,530,80,7,"#8fd3ff"],
+  [250,14,460,130,"#5d4037","國際會議廳（發表會場）","#ffd27a",1],[740,14,206,110,"#8e6c88","貴賓休息室","#fff",1],[300,250,200,30,"#c0392b","發表會報到處","#fff",1],[760,170,170,60,"#9aa4ad","電梯","#333",1],
+  [30,160,130,70,"#2c3e50","監控室","#fff",1],[30,300,130,50,"#b03a2e","消防總機","#fff",1],[200,170,50,50,"#8d6e63","安全梯","#fff",1],[420,440,120,40,"#5b4636","大廳櫃台","#fff",1],[180,440,120,50,"#d7c7e8","收發室","#333",1]],
+ gates:[560,200,4],stage:[260,24],tripods:[[590,330],[640,330],[690,330]],cctv:[42,172],cars:[[800,340],[860,340],[800,420]],barrier:[790,520],gate:[440,537,80],
+ spot:{gate:[480,515],counter:[480,425],gates:[640,240],elev:[845,250],cctv:[95,245],fire:[95,365],roof:[225,245],press:[640,400],dock:[640,470],barrier:[850,505],vip:[840,150],hall:[480,165],smoke:[120,80],mail:[240,425],P1:[300,190],P2:[920,150],P3:[380,500],P4:[60,450]}},
+"2-3":{post:"夜間櫃台",boss:"物業經理",bg:"#9aa6b8",bg2:"#93a0b2",nm:{elev:"電梯",court:"大廳",light:"走廊燈"},
+ units:{A:["3F 律師事務所","6F 遊戲公司","8F 貿易公司"],B:["12F 科技公司","14F 新聞台","16F 設計公司"],C:["20F 外商公司","22F 證券公司","25F 董事長室"]},gl:{A:"低樓層格",B:"中樓層格",C:"高樓層格"},
+ r:[[380,280,200,8,"#555"],[760,420,186,117,"#c9c9c9","卸貨區","#333"],[240,470,200,67,"#7d7d7d","B1 車道","#fff"],[40,530,60,7,"#ffd27a"],[440,530,80,7,"#555"],
+  [700,14,246,120,"#263238","B1 機房（伺服器）","#7fffd4",1],[30,30,160,90,"#2c3e50","監控室","#fff",1],[230,30,130,60,"#b03a2e","消防總機","#fff",1],[380,160,200,60,"#9aa4ad","電梯","#333",1],[600,160,70,60,"#8d6e63","安全梯","#fff",1],
+  [800,300,140,60,"#5d6d7e","茶水間／販賣機","#fff",1],[100,400,130,40,"#5b4636","夜間櫃台","#ffd27a",1],[250,420,120,40,"#d7c7e8","收發室","#333",1],[620,330,120,40,"#6d4c41","大廳沙發","#fff",1]],
+ elevs:[[392,170],[440,170],[488,170],[536,170]],cctv:[42,42],gates:[380,284,5],barrier:[260,520],gate:[40,537,60],lockGate:[440,537,80],
+ spot:{gate:[70,515],counter:[165,385],cctv:[110,140],fire:[295,105],elev:[480,240],gates:[480,310],roof:[635,240],server:[820,155],sofa:[680,390],vendor:[870,380],dock:[850,470],side:[900,515],mail:[310,405],P1:[60,200],P2:[700,280],P3:[600,470],P4:[400,110]}}};
+let M=MAPS["1-1"],SOLID,SPOT,UNITS,GL,WORLD=1;
+function setMap(st){WORLD=st.w;M=MAPS[st.id];SOLID=WALL.concat(M.r.filter(r=>r[7]).map(r=>r.slice(0,4)));SPOT=M.spot;UNITS=M.units;GL=M.gl}
+setMap(ALL[0]);
+const RES_PLATES=["ABC-1234","BKV-5566","RAA-8899","AQZ-0707"];
+// ---- state ----
+let G=null,state="title";
+const P={x:490,y:430,dir:1,step:0};
+function setMeters(){$("mS").style.width=G.sat+"%";$("mC").style.width=G.com+"%";$("mE").style.width=G.en+"%"}
+function clamp(v){return Math.max(0,Math.min(100,v))}
+function fmtTime(m){m=Math.round(m)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")}
+// ---- task definitions ---- each returns {label, spot, npc, act()}
+const PRI={visitor:2,sales:2,pkgIn:2,shelf:2,pickup:2,food:2,car:2,patrol:1,noise:2,key:2,elder:1,angry:3,light:1,trash:2,bento:1,loiter:3,elevator:3,drill:2,fakeRel:2,fakeRepair:2,scam:2,fall:3,w2visitor:2,nocard:2,meeting:2,reno:2,moving:2,parkfee:2,smoke:1,cctvSusp:3,suspGo:3,alarm:3,overtime:1,vendor:2,boss:3,protest:3,spy:3,fakeIT:2,blackout:3,firedrill:2,roof:1,garden:1,mbox:2,moveIn:2,petElev:2,parkB1:2,trashRoom:2,leak:2,valet:2,vipGuest:2,pkgLux:2,concierge:1,paparazzi:3,club:2,tailgate:3,privElev:2,gymHurt:3,rush:2,interview:1,press:2,vipCar:2,stageLoad:2,lostBadge:2,sideDoor:3,server:3,nightFood:2,sleeper:1};
+const OUTSIDER={visitor:1,sales:1,pkgIn:1,food:1,fakeRel:1,fakeRepair:1,scam:1,w2visitor:1,meeting:1,reno:1,moving:1,vendor:1,protest:1,spy:1,fakeIT:1,mbox:1,moveIn:1,pkgLux:1,paparazzi:1,tailgate:1,interview:1,press:1,vipCar:1,stageLoad:1,nightFood:1};
+function redPending(ex){return G.active.some(x=>!x.dead&&x!==ex&&x.pri===3)}
+function serious(t,why){if(redPending(t))return fire(why+"，而且當時還有緊急事件放著不管！");rate(t,0,-15,-30,why)}
+function rate(t,stars,sat,com,msg){if(t.dead)return;const pend=G.active.filter(x=>!x.dead&&x!==t);
+ if(pend.some(x=>x.pri>t.pri)){const red=pend.some(x=>x.pri===3);sat-=red?6:3;com-=red?4:1;stars=Math.max(0,stars-1);msg+=red?"（⚠ 紅色急件還在等！）":"（⚠ 有更重要的事）";G.prioMiss++}
+ else if(t.out&&pend.some(x=>x.pri===t.pri&&!x.out)){sat-=3;msg+="（⚠ 住戶優先）";G.prioMiss++}
+G.sat=clamp(G.sat+sat);G.com=clamp(G.com+com);G.log.push({name:t.label,stars,msg});G.done++;t.dead=true;toast(["❌","⭐","⭐⭐","⭐⭐⭐"][stars]+" "+msg);beep(stars>=2?880:220,.15);G.en=clamp(G.en-4);G.clock+=Math.round(G.span/G.n);setMeters();checkFire();if(state==="play")autosave()}
+function checkFire(){if(state==="fired")return;if(G.sat<=0)fire("住戶滿意度歸零，住戶連署要求換保全。");else if(G.com<=0)fire("管委會評價歸零，管委會開會決議：換人。")}
+const DEF={
+garden(){return{label:"中庭落葉／澆花",spot:"court",npc:null,act(t){modal("中庭 🌳","颱風過後中庭滿地落葉，花圃也乾了。",[["掃好步道、澆花，順手檢查兒童遊具螺絲",()=>rate(t,3,4,4,"中庭乾淨又安全，住戶點頭")],["只掃門口那一段",()=>rate(t,1,0,-2,"住戶散步踩到濕葉子滑一跤")]])}}},
+mbox(){const u=rnd(UNITS.B);return{label:"掛號信通知（"+u+"）",spot:"mbox",npc:"#16a085",act(t){modal("郵差 ✉","「"+u+" 的掛號信，本人不在，管理室可以代收嗎？」",[["依住戶代收授權書代簽，登記並在信箱貼通知單",()=>rate(t,3,4,5,"有授權書才代收，程序正確")],["直接塞進住戶信箱",()=>rate(t,0,-6,-6,"掛號信被廣告單淹沒，住戶找不到")],["請郵差留招領單",()=>rate(t,2,0,2,"沒錯，但住戶要跑一趟郵局")]])}}},
+moveIn(){const u=rnd(UNITS.C);return{label:"住戶搬家要用電梯（"+u+"）",spot:"B",npc:"#e67e22",act(t){modal("搬家公司 📦","「"+u+" 今天搬進來，電梯借我們兩個小時！」",[["確認有預約，貼電梯保護板、切獨立運轉，收清潔保證金",()=>rate(t,3,4,7,"搬家程序完整，電梯毫髮無傷")],["沒鋪保護板，叫他們小心點",()=>rate(t,1,-2,-8,"電梯內壁被沙發刮出一條線")],["週末不准搬家",()=>rate(t,0,-6,-2,"規約沒這條，新住戶很傻眼")]])}}},
+petElev(){return{label:"大狗搭電梯沒牽繩",spot:"lobby",npc:"#a0522d",act(t){modal("電梯口 🐕","住戶帶黃金獵犬要搭電梯，沒牽繩，另一位住戶抱著小孩嚇到退後。",[["客氣提醒依規約牽繩，請他等下一班或走寵物動線",()=>rate(t,3,5,4,"兩邊住戶都顧到")],["「狗很乖啦」就讓他上",()=>rate(t,1,-5,-3,"小孩被嚇哭，家長寫信給管委會")],["大聲斥責飼主",()=>rate(t,0,-6,-2,"變成鄰居吵架")]])}}},
+parkB1(){return{label:"B1 住戶車位被佔",spot:"garage",npc:"#d35400",act(t){modal("B1 停車場 🚙","「我的 B1-37 車位被一台陌生白車停了！」",[["查車牌登記、聯絡訪客或張貼違停通知，協助住戶暫停臨停格",()=>rate(t,3,5,5,"有查證又幫住戶先安頓")],["叫拖吊直接拖",()=>rate(t,1,0,-6,"原來是住戶親戚的車，糾紛擴大")],["「車位的事自己處理」",()=>rate(t,0,-8,-3,"住戶很火")]])}}},
+trashRoom(){return{label:"垃圾間出現大型家具",spot:"garbage",npc:null,act(t){modal("垃圾／回收間 🗑","有人把整張彈簧床丟在回收間，擋住了廚餘桶。",[["拍照、調監視器查是哪戶，通知依規定預約清潔隊大型廢棄物",()=>rate(t,3,4,6,"依程序處理，費用由住戶負擔")],["自己扛去巷口丟",()=>rate(t,0,-2,-8,"違法棄置被環保局開單")],["先放著",()=>rate(t,1,-4,-2,"廚餘臭到整層樓")]])}}},
+leak(){return{label:"交誼廳天花板漏水",spot:"court",npc:null,act(t){modal("交誼廳 💧","天花板在滴水，地上一灘水，旁邊是插座。",[["放警示牌、接水桶、斷電並回報總幹事找樓上住戶與水電",()=>rate(t,3,4,7,"先安全再找原因")],["拿拖把拖一拖",()=>rate(t,1,0,-4,"一直滴，地板泡爛了")],["不理它",()=>rate(t,0,-6,-6,"有住戶滑倒")]])}}},
+valet(){const u=rnd(UNITS.A);return{label:"住戶座車抵達（"+u+"）",spot:"valet",npc:"#111",act(t){modal("落客迴車道 🚘","黑色賓士停在迴車道，"+u+" 住戶下車，後車廂有很多購物袋。",[["開車門問候、協助提袋，通知禮賓櫃台先按好私人電梯",()=>rate(t,3,6,5,"VIP 一路順暢，臉上有笑容")],["揮手請司機自己開進車庫",()=>rate(t,1,-4,-2,"住戶覺得服務不像豪宅")],["收鑰匙自己幫忙停車",()=>rate(t,0,-4,-8,"沒有代客泊車保險，總幹事臉都白了")]])}}},
+vipGuest(){const u=rnd(UNITS.B),ok=RNGf()<.5;return{label:"嚴格訪客管制（"+u+"）",spot:"counter",npc:"#8e44ad",act(t){modal("訪客 🎩","「我是 "+u+" 的朋友，他說直接上去就好。」",[["請出示證件，致電住戶取得授權，再陪同搭私人電梯",()=>modal("📞 "+u,ok?"住戶：「對，請陪他上來。」":"住戶：「我今天不見客。」",[[ok?"換證並親自陪同上樓":"禮貌請訪客於等候室，轉達住戶不便",()=>rate(t,3,5,8,"豪宅門禁：授權＋陪同，標準流程")]])],["看起來是有錢人，放行",()=>rate(t,0,-10,-12,"豪宅訪客未授權進入，嚴重失職")]])}}},
+pkgLux(){const u=rnd(UNITS.C);return{label:"精品快遞要本人簽收（"+u+"）",spot:"gate",npc:"#16a085",act(t){modal("精品快遞 💎","「"+u+" 的珠寶，要本人簽收，價值很高。」",[["依住戶指示：通知本人下樓或由禮賓陪同送到戶門，不代簽",()=>rate(t,3,5,6,"高價品不代簽，責任清楚")],["幫忙代簽收",()=>rate(t,0,-4,-10,"後來說盒子是空的，責任變成你的")]])}}},
+concierge(){return{label:"住戶禮賓需求",spot:"lobby",npc:"#9b59b6",act(t){modal("住戶 🍷","「幫我訂今晚兩位的餐廳，順便叫乾洗店來收西裝。」",[["記錄需求、確認時間，回覆住戶並交接給早班",()=>rate(t,3,6,3,"禮賓服務到位")],["「這不是保全的工作」",()=>rate(t,0,-8,-2,"豪宅住戶付了高額管理費…")],["答應了但忘記交接",()=>rate(t,1,-3,-2,"西裝隔天沒被收走")]])}}},
+paparazzi(){return{label:"🚨 狗仔守在大門",spot:"gate",npc:"#34495e",act(t){modal("大門 📸","有人拿長鏡頭對著大廳，想問「某藝人是不是住這裡」。",[["不透露任何住戶資訊，請他離開私人區域並通報住戶",()=>rate(t,3,5,8,"保護住戶隱私")],["「對啊住B棟」",()=>serious(t,"洩漏住戶個資給狗仔")],["搶相機",()=>rate(t,1,-2,-6,"被反告妨害自由")]])}}},
+club(){return{label:"會所泳池：小孩獨自游泳",spot:"court",npc:"#e17055",act(t){modal("恆溫泳池 🏊","晚上 9 點，一個小學生獨自在泳池，救生員已下班。",[["請孩子先上岸，聯絡家長，並依會所規定關閉泳池",()=>rate(t,3,6,6,"安全第一，家長道謝")],["在旁邊看著就好",()=>rate(t,1,0,-4,"規定是未成年要家長陪同")],["叫他快回家，不管了",()=>rate(t,0,-6,-6,"沒聯絡家長，萬一出事…")]])}}},
+tailgate(){return{label:"🚨 陌生車跟車進車道",spot:"barrier",npc:"#2d3436",act(t){modal("車道 🚗","住戶車剛進柵欄，一台陌生車緊跟著鑽進來。",[["放下柵欄攔截，詢問來意、核對車牌與訪客預約",()=>rate(t,3,4,8,"擋下跟車，豪宅車道守住了")],["算了，應該是朋友",()=>rate(t,0,-8,-10,"陌生車在車庫亂晃")]])}}},
+privElev(){const u=rnd(UNITS.A);return{label:"私人電梯卡不能用（"+u+"）",spot:"A",npc:"#2980b9",act(t){modal("A戶私人電梯 🛗","住戶的家事阿姨說感應卡刷不上，買菜回來進不了家。",[["核對住戶登記的家事人員名單，聯絡住戶確認後代刷並報修卡片",()=>rate(t,3,5,5,"確認身分再協助")],["直接用萬用卡送她上去",()=>rate(t,1,0,-6,"沒確認身分就開私人電梯")],["叫她在樓下等住戶回來",()=>rate(t,0,-5,0,"冰淇淋都融化了")]])}}},
+gymHurt(){return{label:"🚑 健身房住戶拉傷",spot:"gym",npc:"#e74c3c",act(t){modal("會所健身房 🏋","一位住戶深蹲時腰閃到，躺在地上不敢動。",[["不要搬動，詢問狀況、必要時叫119，通知家屬並填事故紀錄",()=>rate(t,3,7,7,"處置得宜")],["扶他起來走走看",()=>rate(t,1,-4,-4,"痛到大叫")],["拿痠痛貼布給他就走",()=>rate(t,0,-8,-6,"住戶覺得被敷衍")]])}}},
+rush(){return{label:"電梯廳大排長龍",spot:"elev",npc:"#2980b9",act(t){modal("電梯廳 🛗","8:55，電梯前排了五十個人，有人開始插隊。",[["引導排隊、宣導高低樓層分流，必要時開啟貨梯協助",()=>rate(t,3,5,5,"分流順暢，大家準時打卡")],["站旁邊滑手機",()=>rate(t,0,-6,-4,"吵起來了")],["叫大家走樓梯",()=>rate(t,1,-6,0,"25 樓的人想打你")]])}}},
+interview(){const u=rnd(UNITS.B);return{label:"面試者在咖啡店迷路（"+u+"）",spot:"cafe",npc:"#8e44ad",act(t){modal("面試者 🙋","「請問 "+u+" 要怎麼上去？我 9 點面試！」",[["請他到櫃台換證，並打給公司人資確認",()=>rate(t,3,3,5,"禮貌又照程序")],["直接帶他刷閘門",()=>rate(t,0,-3,-8,"沒換證就放行")],["「我不知道」",()=>rate(t,1,-4,0,"面試遲到")]])}}},
+press(){return{label:"記者要進發表會",spot:"press",npc:"#34495e",act(t){modal("媒體區 🎤","「我是週刊記者，沒有邀請函，讓我進去拍一下！」",[["核對主辦公司媒體名單，不在名單則請公關出面處理",()=>rate(t,3,4,7,"媒體管制有依據")],["給他一張來賓證",()=>rate(t,0,-4,-10,"偷拍到未公開產品")],["推他出去",()=>rate(t,1,-4,-4,"被寫成「保全暴力」")]])}}},
+vipCar(){return{label:"🚗 貴賓抵達休息室",spot:"vip",npc:"#111",act(t){modal("貴賓休息室 🌟","主辦公司說：「部長 5 分鐘後到！」",[["預留電梯、清空動線，並與隨扈確認路線",()=>rate(t,3,4,8,"動線順暢，主辦大讚")],["請貴賓跟一般來賓一起排隊報到",()=>rate(t,1,-3,-6,"主辦公司很尷尬")]])}}},
+stageLoad(){return{label:"舞台設備進場",spot:"dock",npc:"#d35400",act(t){modal("設備卸貨區 🎛","燈光音響公司 3 台貨車要進場，器材要搬到會議廳。",[["核對進場申請，安排貨梯並鋪保護、限時卸貨",()=>rate(t,3,3,7,"進場有條理")],["讓他們從大廳推上去",()=>rate(t,0,-6,-6,"大理石地板被刮傷")]])}}},
+lostBadge(){return{label:"來賓遺失物品",spot:"hall",npc:"#2980b9",act(t){modal("會議廳門口 👜","來賓說他的筆電包不見了，裡面有公司資料。",[["登記失物、調閱監視器、廣播招領",()=>rate(t,3,5,4,"在報到處找到了")],["叫他自己去找",()=>rate(t,0,-6,-2,"來賓非常不滿")]])}}},
+sideDoor(){return{label:"🚨 後門被撐開沒關",spot:"side",npc:null,act(t){modal("後門 🚪","深夜後門被紙箱卡著，門禁警報沒響。",[["關門、檢查門禁與監視器，回報物業並記錄",()=>rate(t,3,3,8,"夜間門禁漏洞補上了")],["把紙箱拿走就好",()=>rate(t,1,0,-2,"沒查是誰撐的")],["沒差吧",()=>rate(t,0,-6,-10,"半夜有人從後門溜進來")]])}}},
+server(){return{label:"🚨 機房溫度警報",spot:"server",npc:null,act(t){modal("B1 機房 🌡","租戶伺服器機房溫度 38°C 還在升高。",[["不擅自進入，立刻通知租戶 IT 值班與機電廠商，記錄時間",()=>rate(t,3,4,8,"通報正確，伺服器救回來了")],["自己進去把冷氣開最大",()=>rate(t,1,0,-6,"擅入租戶機房，違反合約")],["明天再說",()=>rate(t,0,-8,-12,"伺服器過熱當機")]])}}},
+nightFood(){const u=rnd(UNITS.B);return{label:"深夜外送到後門（"+u+"）",spot:"gate",npc:"#27ae60",act(t){modal("外送員 🛵","「"+u+" 叫了 12 杯手搖跟鹽酥雞！」",[["請加班員工下樓到夜間櫃台取餐",()=>rate(t,3,3,4,"夜間外送依規定")],["讓外送員自己上去",()=>rate(t,0,-3,-8,"夜間陌生人在大樓亂晃")]])}}},
+sleeper(){return{label:"員工睡在大廳沙發",spot:"sofa",npc:"#7f8c8d",act(t){modal("大廳沙發 😴","凌晨 1 點，有位西裝男睡在沙發上，識別證掛在脖子上。",[["輕聲叫醒，確認是租戶員工，協助叫車或回公司",()=>rate(t,3,4,4,"關心又守規矩")],["拍照上傳群組",()=>rate(t,0,-6,-6,"侵犯隱私")],["讓他睡",()=>rate(t,1,0,-2,"他錯過了末班車…")]])}}},
+visitor(){const u=rnd([...UNITS.A,...UNITS.B,...UNITS.C]),ok=RNGf()<.65,name=rnd(["林小姐","陳先生","王太太","張同學"]);return{label:"訪客登記（"+u+"）",spot:"gate",npc:"#8e44ad",act(t){
+ let reg=false;modal("訪客 "+name,`「你好，我要找 ${u} 的朋友。」`,[["請出示證件並登記訪客簿",()=>{reg=true;call()}],["直接撥對講機",()=>call()],["看起來人不錯，直接放行",()=>rate(t,0,-6,-10,"未登記未確認就放行，違反規定")]]);
+ function call(){modal("對講機 📞 "+u,ok?"住戶：「對對，是我朋友，讓他上來。」":"住戶：「蛤？我沒有約人耶。」",[["放行並告知電梯位置",()=>ok?rate(t,reg?3:2,5,reg?6:1,reg?"完整登記＋確認，標準程序":"有確認但漏了登記"):rate(t,0,-8,-10,"住戶沒約還放行！")],["婉拒：「不好意思，住戶沒有同意喔」",()=>ok?rate(t,0,-8,-3,"住戶同意了卻不讓進"):rate(t,reg?3:2,4,reg?6:2,"確認後婉拒，處理得宜")]])}}}},
+sales(){const k=rnd(["推銷淨水器的業務","發廣告傳單的工讀生","推銷靈骨塔的阿姨"]);return{label:"可疑來客："+k,spot:"gate",npc:"#c0392b",act(t){modal(k,"「帥哥，讓我進去每戶塞一下就好，很快啦！」",[["「不好意思，社區規定不能推銷／發傳單，謝謝您。」",()=>rate(t,3,4,6,"禮貌婉拒，管委會很滿意")],["「走開啦！」大聲趕人",()=>rate(t,1,-2,-2,"有擋住，但態度被住戶投訴")],["收下一疊傳單，幫忙放信箱",()=>rate(t,0,-10,-10,"住戶信箱被塞爆，大家很生氣")]])}}},
+pkgIn(){const b=rnd(["A","B","C"]),u=rnd(UNITS[b]),co=rnd(["黑貓","新竹物流","郵局","蝦皮店到店"]);return{label:co+"送包裹（"+u+"）",spot:"gate",npc:"#16a085",act(t){modal(co+" 司機","「"+u+" 的包裹，幫簽一下！」",[["核對收件人、簽收並記錄",()=>{t.dead=true;G.carry={u,b,good:true};toast("📦 拿著 "+u+" 的包裹，送去包裹室上架");spawn("shelf",{u,b,logged:true})}],["隨便簽了先放櫃台",()=>{t.dead=true;G.carry={u,b};toast("📦 拿著 "+u+" 的包裹，送去包裹室上架");spawn("shelf",{u,b,logged:false})}],["拒收：「我們不代收」",()=>rate(t,0,-8,-4,"社區有代收服務，住戶抱怨")]])}}},
+shelf(o){return{label:"包裹上架（"+o.u+"）",spot:"mail",npc:null,act(t){modal("包裹室 📦","要把 "+o.u+" 的包裹放在哪一格？",shuffle(["A","B","C"]).map(x=>[GL[x],()=>{G.carry=null;const ok=x===o.b;if(ok)G.shelf.push(o.u);else G.wrong.push(o.u);rate(t,ok?(o.logged?3:2):0,ok?3:-6,ok?(o.logged?4:0):-6,ok?(o.logged?"簽收記錄＋正確上架":"上架正確但沒記錄"):"放錯格，等等住戶找不到！");if(G.pickQ)G.pickQ.push(o.u)}]))}}},
+pickup(o){return{label:"住戶領包裹（"+o.u+"）",spot:"counter",npc:"#2980b9",act(t){const opts=shuffle([o.u,...shuffle([...UNITS.A,...UNITS.B,...UNITS.C].filter(x=>x!==o.u)).slice(0,3)]);modal(o.u+" 住戶","「我有包裹嗎？」（請拿正確的那件，並請住戶簽領）",opts.map(x=>[x+" 的包裹",()=>x===o.u?rate(t,G.wrong.includes(o.u)?1:3,5,3,G.wrong.includes(o.u)?"找了半天（之前放錯格）才找到":"正確交付並簽領"):rate(t,0,-10,-6,"拿錯包裹！包裹烏龍")]))}}},
+food(){const u=rnd([...UNITS.A,...UNITS.B]);return{label:"外送到達（"+u+"）",spot:"gate",npc:"#27ae60",act(t){modal("外送員 🛵","「"+u+" 的餐，我直接送上去喔！」",[["「外送不能上樓，我通知住戶下來拿／暫放櫃台。」",()=>rate(t,3,3,5,"依規定處理外送")],["好啦快去快回",()=>rate(t,0,-5,-8,"外送員上樓，違反管理規約")],["幫他把餐送上樓",()=>rate(t,1,4,-4,"住戶很開心，但"+M.post+"唱空城計")]])}}},
+car(){const res=RNGf()<.6,pl=res?rnd(RES_PLATES):rnd(["KXT-3321","BQE-9012","7788-MZ"]);return{label:"車輛進出（"+pl+"）",spot:"barrier",npc:"#d35400",act(t){modal("車道柵欄 🚗 車牌 "+pl,"住戶車牌：「"+RES_PLATES.join("、")+"」",[["比對是住戶車 → 抬桿",()=>res?rate(t,3,3,3,"正確放行住戶車"):rate(t,0,-6,-8,"陌生車輛直接放行")],["攔下詢問來意並登記",()=>res?rate(t,1,-4,0,"住戶：「我住這十年了你不認得我？」"):rate(t,3,2,6,"陌生車輛確實盤查登記")]])}}},
+patrol(o){return{label:"巡邏簽到 "+o.p,spot:o.p,npc:null,act(t){rate(t,3,1,4,"巡邏點 "+o.p+" 簽到完成")}}},
+noise(){return{label:"噪音抱怨（"+rnd(UNITS.B)+"）",spot:"B",npc:"#7f8c8d",act(t){modal("住戶抱怨 😤","「樓上每天半夜在彈鋼琴！你們保全都不管喔？」",[["記錄並表示會轉達管委會、張貼公告",()=>rate(t,3,4,5,"依程序記錄並轉達")],["親自上樓去敲門罵人",()=>rate(t,1,-2,-6,"越權處理，引發鄰居糾紛")],["「這不歸我管啦」",()=>rate(t,0,-8,-3,"住戶更火大了")]])}}},
+key(){return{label:"住戶鑰匙不見",spot:"lobby",npc:"#9b59b6",act(t){modal("住戶 🔑","「我鑰匙不見了，可以幫我開門嗎？」",[["核對住戶名冊與身分後，協助聯絡鎖匠",()=>rate(t,3,5,4,"確認身分再協助，專業")],["用備份鑰匙直接開門",()=>rate(t,0,-2,-8,"沒確認身分就開門，有安全風險")],["請他自己想辦法",()=>rate(t,1,-6,0,"住戶覺得被冷落")]])}}},
+elder(){return{label:"阿伯住戶來聊天",spot:"counter",npc:"#a0522d",act(t){modal("阿伯 👴","「少年仔，我跟你講，我年輕的時候……（已經講了20分鐘）」",[["耐心聽一下，再客氣說要去忙",()=>rate(t,3,6,2,"阿伯很開心，還送你養樂多")],["假裝講電話",()=>rate(t,2,0,0,"阿伯有點失落")],["「阿伯我很忙」",()=>rate(t,1,-5,0,"阿伯去管委會告狀")]])}}},
+angry(){return{label:"生氣的住戶",spot:"counter",npc:"#e74c3c",act(t){modal("住戶 💢","「我包裹為什麼昨天沒通知我！你們領薪水是在幹嘛！」",[["「很抱歉讓您不方便，我馬上幫您查記錄。」",()=>rate(t,3,6,4,"冷靜道歉並處理")],["「又不是我值班的！」",()=>rate(t,1,-6,-3,"推卸責任，越吵越大")],["跟他對罵",()=>rate(t,0,-12,-10,"被PO上社區臉書社團…")]])}}},
+light(){return{label:M.nm.light+"故障",spot:"garage",npc:null,act(t){modal("停車場 💡","B1 燈管一閃一閃。",[["拍照記錄，通報總幹事叫水電",()=>rate(t,3,3,5,"依程序通報")],["自己爬梯子去換",()=>rate(t,1,2,-5,"沒有安全措施，總幹事嚇壞了")],["等別人發現",()=>rate(t,0,-4,-4,"住戶摔倒了…")]])}}},
+trash(){return{label:"🎵 垃圾車來了！搬垃圾",spot:"garbage",npc:null,act(t){modal("垃圾集中區 🗑","〈少女的祈禱〉響起！",[["把社區垃圾和回收分類推出去",()=>rate(t,3,5,4,"準時倒垃圾，回收分類確實")],["全部混在一起丟",()=>rate(t,1,0,-6,"清潔隊退件")]])}}},
+bento(){return{label:"🍱 便當（回"+M.post+"）",spot:"counter",npc:null,act(t){modal("便當時間 🍱","排骨便當到了，但"+M.post+"不能沒人。",[["在櫃台邊顧邊吃",()=>{G.en=clamp(G.en+35);rate(t,3,0,2,"吃飽了，精神恢復！")}],["跑去外面麵店吃",()=>{G.en=clamp(G.en+40);rate(t,1,-4,-6,M.post+"沒人被投訴")}]])}}},
+loiter(){return{label:"⚠ 可疑人士徘徊",spot:"court",npc:"#34495e",act(t){modal("可疑人士 🕶","一名陌生男子在"+M.nm.court+"來回張望。",[["上前禮貌詢問來意，必要時請離開並記錄",()=>rate(t,3,4,6,"警覺且有禮")],["直接報警說有小偷",()=>rate(t,1,0,-2,"原來是新住戶在找車位…")],["當沒看到",()=>rate(t,0,-8,-10,"隔天機車被偷了")]])}}},
+elevator(){let s=[];return{label:"🚨 電梯受困（"+M.nm.elev+"）",spot:"C",npc:"#c0392b",act(t){step();function step(){const all=[["透過對講機安撫受困住戶","安撫"],["打電話叫電梯維修公司","叫維修"],["回報總幹事","回報"],["自己撬開電梯門","撬門"]].filter(x=>!s.includes(x[1]));modal("電梯受困 🛗","已做："+(s.join("→")||"（無）"),all.map(x=>[x[0],()=>{if(x[1]==="撬門")return rate(t,0,-6,-12,"自行撬門非常危險！");s.push(x[1]);if(s.length<3)step();else rate(t,s[0]==="安撫"?3:2,6,8,s[0]==="安撫"?"先安撫、叫修、回報，完美":"處理完成，但應先安撫住戶")}]))}}}},
+fakeRel(){const u=rnd(UNITS.C);return{label:"自稱住戶親戚（"+u+"）",spot:"gate",npc:"#6c5ce7",act(t){modal("訪客 🙂","「我是"+u+"陳媽媽的外甥啦！她叫我來拿東西，不用打電話了，我很熟。」",[["「不好意思，還是要登記並撥對講機確認喔。」",()=>modal("對講機 📞 "+u,"陳媽媽：「外甥？我沒有外甥啊！」",[["婉拒他進入，並提醒住戶注意",()=>rate(t,3,5,8,"識破假冠親友！")]])],["他講得出住戶姓氏，應該是真的，放行",()=>serious(t,"假冠親友混進社區偷東西")]])}}},
+fakeRepair(){return{label:"自稱修繕人員",spot:"gate",npc:"#636e72",act(t){modal("修繕工？🔧","「瓦斯公司的，來檢查管線，每戶收檢測費300。」（沒有工單）",[["查證件並向總幹事確認有無排定工程",()=>rate(t,3,4,8,"查無工程，識破冒充修繕工")],["穿制服又有工具箱，放行",()=>serious(t,"冒充修繕工挨家挨戶收錢")],["直接趕走",()=>rate(t,1,0,-2,"擋住了，但沒查證也沒記錄")]])}}},
+scam(){return{label:"可疑來電者到櫃台",spot:"counter",npc:"#2d3436",act(t){modal("西裝男 🕴","「我是地檢署的，"+rnd(UNITS.A)+"住戶涉及洗錢，請叫他帶現金下來監管。」",[["拒絕，提醒住戶這是詐騙，撥165反詐騙專線",()=>rate(t,3,6,10,"識破詐騙，住戶感激涕零")],["幫忙打給住戶請他帶錢下來",()=>serious(t,"幫詐騙集團把住戶叫下來交錢")]])}}},
+fall(){return{label:"🚑 阿嬤在"+M.nm.court+"跌倒",spot:"court",npc:"#e17055",act(t){modal("住戶受傷 🚑","阿嬤在"+M.nm.court+"跌倒，說腳很痛。",[["確認意識、不亂搬動，打119並通知家屬",()=>rate(t,3,8,8,"緊急處置正確")],["趕快扶她起來走回家",()=>rate(t,1,-4,-6,"可能造成二次傷害")],["等她家人下來處理",()=>rate(t,0,-12,-8,"住戶覺得保全冷血")]])}}},
+w2visitor(){const u=rnd([...UNITS.A,...UNITS.B,...UNITS.C]),ok=RNGf()<.65,name=rnd(["李經理","吳小姐","面試者黃先生","客戶周董"]);return{label:"訪客換證（"+u+"）",spot:"counter",npc:"#8e44ad",act(t){let reg=false;
+ modal("訪客 "+name,"「你好，我約了 "+u+"。」",[["收證件換訪客證，並打電話給受訪公司確認",()=>{reg=true;call()}],["只寫名字就給訪客證",()=>call()],["直接幫他刷閘門",()=>rate(t,0,-6,-10,"未換證就放行，門禁形同虛設")]]);
+ function call(){modal("📞 "+u+" 櫃台",ok?"秘書：「對，請他上來，謝謝！」":"秘書：「今天沒有這個約喔。」",[["發訪客證，引導搭電梯",()=>ok?rate(t,reg?3:2,4,reg?6:1,reg?"換證＋確認，標準流程":"有確認但沒押證件"):rate(t,0,-8,-10,"受訪公司沒約還放行！")],["婉拒並請他直接聯絡受訪者",()=>ok?rate(t,0,-8,-3,"明明有約卻被擋，客戶跑了"):rate(t,reg?3:2,4,reg?6:2,"確認後婉拒，處理得宜")]])}}}},
+nocard(){const u=rnd(UNITS.B);return{label:"員工忘記帶門禁卡（"+u+"）",spot:"gates",npc:"#2980b9",act(t){modal("上班族 😩","「我是 "+u+" 的，卡忘在家，快遲到了，打卡要來不及了！」",[["核對員工名冊並打給公司確認，發臨時卡",()=>rate(t,3,4,6,"確認身分再發臨時卡")],["看他穿西裝打領帶，直接幫刷",()=>rate(t,0,-2,-10,"沒核對身分（其實是離職員工…）")],["「沒卡就回家拿」",()=>rate(t,1,-7,0,"遲到被扣全勤，在群組罵保全")]])}}},
+meeting(){const u=rnd(UNITS.B);return{label:"會議大批訪客（"+u+"）",spot:"counter",npc:"#6c5ce7",act(t){modal("大批訪客 👥👥👥","「我們30個人來參加 "+u+" 的說明會！」",[["請主辦公司提供名單，分批換證引導",()=>rate(t,3,4,7,"名單核對、分批換證，有條不紊")],["人太多了，全部直接放行",()=>rate(t,0,-4,-10,"混進不明人士，門禁失守")],["一個一個慢慢手寫登記",()=>rate(t,1,-4,2,"程序對但大廳塞爆，被客訴")]])}}},
+reno(){const u=rnd(UNITS.A);return{label:"裝潢工班報到（"+u+"）",spot:"dock",npc:"#d35400",act(t){modal("裝潢師傅 🔨","「我們來做 "+u+" 的裝潢，材料先搬上去喔！」",[["檢查施工申請與保證金，電梯鋪設保護板",()=>rate(t,3,3,8,"施工程序完整")],["有申請就好，電梯不用保護",()=>rate(t,1,0,-6,"電梯被刮花，管委會要求賠償")],["沒申請也先讓他們上去",()=>rate(t,0,-4,-10,"違規施工，噪音被投訴")]])}}},
+moving(){const u=rnd(UNITS.C);return{label:"搬遷貨運要用電梯（"+u+"）",spot:"dock",npc:"#e67e22",act(t){modal("搬家公司 📦","「"+u+" 要搬辦公室，電梯借一下！」",[["核對預約紀錄，電梯切專用並鋪保護",()=>rate(t,3,4,6,"依預約使用電梯")],["跟上班族共用電梯就好",()=>rate(t,1,-6,-2,"上班族被紙箱擠到抓狂")],["沒預約也沒關係",()=>rate(t,0,-3,-6,"電梯排程大亂")]])}}},
+parkfee(){return{label:"停車繳費糾紛",spot:"barrier",npc:"#c0392b",act(t){modal("租戶員工 😤","「我才停10分鐘為什麼收100！」",[["冷靜說明費率，調閱進場紀錄，有誤協助申訴",()=>rate(t,3,5,4,"冷靜查證，有理有據")],["算了，直接幫他免費抬桿",()=>rate(t,1,2,-8,"私自免收費，帳對不起來")],["跟他吵",()=>rate(t,0,-10,-4,"吵到後面車排到馬路上")]])}}},
+smoke(){return{label:"吸菸區菸味抱怨",spot:"smoke",npc:"#7f8c8d",act(t){modal("租戶員工 🤧","「吸菸區的菸都飄進我們辦公室了！」",[["禮貌提醒吸菸者使用指定區，回報物業加裝標示",()=>rate(t,3,4,4,"兩邊都顧到")],["把抽菸的人罵走",()=>rate(t,1,-3,-2,"抽菸的也是租戶，換他客訴")],["不理他",()=>rate(t,0,-5,-2,"投訴信寄到物業經理信箱")]])}}},
+cctvSusp(){return{label:"🎥 監控發現可疑人士",spot:"cctv",npc:null,act(t){modal("監控室 🖥","停車場畫面閃過一個人影，好像在試拉車門。",[["調閱畫面確認位置，無線電通報後前往",()=>{rate(t,3,2,4,"先確認畫面再行動");spawn("suspGo")}],["不看畫面，直接衝去到處找",()=>{rate(t,1,0,-2,"找錯樓層白跑一趟");spawn("suspGo")}],["應該是貓，繼續滑手機",()=>rate(t,0,-8,-12,"隔天兩台車被破窗")]])}}},
+suspGo(){return{label:"🚨 停車場可疑人士",spot:"barrier",npc:"#2d3436",act(t){modal("停車場 🕶","戴帽T男子在車旁東張西望。",[["保持距離上前詢問，請其離開並報警處理",()=>rate(t,3,4,8,"冷靜處理，警察到場帶走")],["一個人衝上去壓制",()=>rate(t,1,0,-6,"太危險了！保全不是特警")],["假裝沒看到",()=>rate(t,0,-8,-10,"車被偷了")]])}}},
+alarm(){const z=rnd(["12F 第3區","20F 茶水間","B1 機房"]);return{label:"🚨 消防總機警報（"+z+"）",spot:"fire",npc:null,act(t){modal("消防總機 🔔","警報：「"+z+" 偵煙器動作」",[["確認區域，到現場查看，確認誤報後才復歸並記錄",()=>rate(t,3,4,8,"確認後復歸，程序正確（原來是有人在烤吐司）")],["吵死了，直接按消音復歸",()=>rate(t,0,-6,-15,"沒確認就復歸，要是真的火災怎麼辦！")],["還沒確認就全棟廣播疏散",()=>rate(t,1,-6,-2,"全棟上班族爬樓梯下來，很不爽")]])}}},
+overtime(){const u=rnd(UNITS.B);return{label:"加班員工登記（"+u+"）",spot:"counter",npc:"#16a085",act(t){modal("加班族 🥱","「"+u+" 的，加班到現在，要回公司拿東西…」",[["請他登記姓名、公司與進出時間",()=>rate(t,3,3,4,"夜間進出確實登記")],["辛苦了，直接上去吧",()=>rate(t,1,0,-3,"夜間進出沒紀錄")],["「這麼晚不能進」",()=>rate(t,0,-5,0,"老闆明天要的報告做不完")]])}}},
+vendor(){return{label:"廠商進出（飲料機補貨）",spot:"dock",npc:"#27ae60",act(t){modal("廠商 🧃","「補貨的，每次都來，讓我進去就好。」",[["換證登記，核對合約廠商名單",()=>rate(t,3,2,5,"廠商進出有紀錄")],["熟面孔，直接放",()=>rate(t,0,-3,-6,"廠商名單沒核對")]])}}},
+boss(){return{label:"🚗 董事長座車到了",spot:"barrier",npc:"#111",act(t){modal("對講機 📻","秘書：「董事長車子到地下室了！」",[["先開柵欄，通知大廳按住電梯",()=>rate(t,3,3,8,"董事長一路順暢，秘書比讚")],["照一般流程請他排隊繳費",()=>rate(t,1,-2,-6,"秘書直接打給物業經理")]])}}},
+protest(){const u=rnd(UNITS.C);return{label:"🚨 大門抗議／催收人士",spot:"gate",npc:"#c0392b",act(t){modal("大門口 📢","一群人拉白布條，要衝進去找 "+u+"！",[["冷靜擋在門外，通知租戶與物業，必要時報警",()=>rate(t,3,4,8,"守住大門，處理得宜")],["讓他們進大廳吹冷氣",()=>rate(t,0,-10,-12,"大廳變成抗議現場")],["跟他們對嗆",()=>rate(t,1,-6,-4,"被拍下來上了新聞")]])}}},
+spy(){return{label:"🚨 有人偷拍並想尾隨",spot:"gates",npc:"#34495e",act(t){modal("閘門口 📸","陌生人一直拍租戶進出，還想跟著別人刷卡進去。",[["禮貌上前制止尾隨並詢問來意，通報租戶公司",()=>rate(t,3,4,8,"擋下疑似商業間諜")],["搶他手機刪照片",()=>rate(t,1,-2,-8,"保全無權強制刪除，可能違法")],["當沒看到，讓他跟進去",()=>serious(t,"讓疑似商業間諜尾隨進大樓")]])}}},
+fakeIT(){const u=rnd(UNITS.C);return{label:"自稱機房維護廠商（"+u+"）",spot:"gates",npc:"#636e72",act(t){modal("工程師？💻","「"+u+" 機房緊急維修，讓我進去！」（沒有工單）",[["向租戶 IT 窗口確認工單，換證後陪同",()=>rate(t,3,4,8,"查證後才知道根本沒叫修，識破")],["很急的樣子，放行",()=>serious(t,"冒充廠商進入機房偷資料")]])}}},
+blackout(){return{label:"🚨 全棟停電！",spot:"elev",npc:null,act(t){modal("停電 ⚡","燈全暗了，電腦都關機了，上班族在哀嚎（報告沒存）。",[["確認電梯有無受困、確認發電機啟動，廣播安撫並通報機電",()=>rate(t,3,6,8,"停電應變標準流程")],["先去找手電筒",()=>rate(t,1,-4,-4,"電梯裡的人等很久")],["等台電復電就好",()=>rate(t,0,-10,-10,"電梯困人一小時")]])}}},
+firedrill(){return{label:"消防演練",spot:"fire",npc:null,act(t){modal("消防演練 🧯","今天是大樓消防演練。",[["依計畫廣播，引導走樓梯疏散，不可搭電梯",()=>rate(t,3,3,6,"演練確實")],["叫大家搭電梯比較快",()=>rate(t,0,-4,-10,"火災不可搭電梯！")]])}}},
+roof(){return{label:"巡查頂樓逃生門",spot:"roof",npc:null,act(t){modal("頂樓樓梯 🚪","逃生門要怎麼處理？",[["確認門可由內開啟，不上鎖並保持通道淨空",()=>rate(t,3,1,5,"符合消防法規")],["怕小偷，用鐵鍊鎖死",()=>rate(t,0,-4,-10,"逃生門上鎖，違反消防法規！")]])}}},
+drill(){return{label:"🚨 地震避難演練",spot:"court",npc:null,act(t){modal("防災演練 🌏","管委會舉辦地震演練，你負責引導住戶。",[["引導住戶至中庭空曠處集合並點名",()=>rate(t,3,4,6,"演練確實")],["叫大家搭電梯下來比較快",()=>rate(t,0,-4,-10,"地震不可搭電梯！")]])}}}
+};
+// ---- level script (no timers; tasks released in waves) ----
+function startLevel(si){const st=ALL[si];setMap(st);G={si,st,rs:(Math.random()*4294967296)>>>0,night:st.night,sat:60,com:60,en:100,clock:st.night?20*60:8*60,span:720,n:st.q.length+3,queue:[],active:[],log:[],done:0,total:0,carry:null,shelf:[],wrong:[],moved:0,prioMiss:0};RNGf=seeded(nextSeed());G.queue=arrangeQ(st.q);RNGf=Math.random;const c=SPOT.counter;P.x=c[0];P.y=c[1];P.path=[];P.goal=null;state="play";hideAll();$("hud").classList.add("on");setMeters();autosave(true)}
+function fire(why){state="fired";clearRun();$("hud").classList.remove("on");$("prompt").style.display="none";$("fireWhy").innerHTML=M.boss+"：「小老弟，"+why+"<br>明天不用來了，制服記得洗乾淨還回來。」<br><small>（"+G.st.id+" 未完成）</small>";show("ovFired");beep(150,.5,"sawtooth")}
+$("bRetry").onclick=()=>startLevel(G.si);$("bFireMenu").onclick=()=>levelMenu();
+function build(type,o,seed){RNGf=seeded(seed);let d;try{d=DEF[type](o)}finally{RNGf=Math.random}const t=Object.assign({type,o,seed,id:seed%1000/1000,pri:PRI[type],out:!!OUTSIDER[type]},d);if(type==="car")t.out=!RES_PLATES.some(p=>t.label.includes(p));return t}
+function spawn(type,o={}){if(type.startsWith("patrol:")){o.p=type.slice(7);type="patrol"}
+ if(type==="pickup"){const u=G.shelf.concat(G.wrong).shift();if(!u){o.u=UNITS.A[G.rs%3];G.shelf.push(o.u)}else{o.u=u;G.shelf=G.shelf.filter(x=>x!==u)}}
+ const t=build(type,o,nextSeed());G.active.push(t);G.total++;beep(520,.06)}
+const RUN_KEY="guardgame_run_v2";try{localStorage.removeItem("guardgame_run_v1")}catch(e){}
+function snapshot(){const{st,active,moving,...r}=G;return Object.assign(r,{px:Math.round(P.x*10)/10,py:Math.round(P.y*10)/10,sid:st.id,active:active.filter(t=>!t.dead).map(t=>({type:t.type,o:t.o,seed:t.seed}))})}
+function autosave(quiet){if(!G||!["play","modal","pause"].includes(state))return;try{localStorage.setItem(RUN_KEY,JSON.stringify(snapshot()));if(!quiet){const e=$("saved");e.style.opacity=1;clearTimeout(autosave.t);autosave.t=setTimeout(()=>e.style.opacity=0,1200)}}catch(e){}}
+function clearRun(){try{localStorage.removeItem(RUN_KEY)}catch(e){}}
+function getRun(){try{const r=JSON.parse(localStorage.getItem(RUN_KEY)||"null");if(!r||!ALL[r.si]||r.sid!==ALL[r.si].id||!Array.isArray(r.log)||!Array.isArray(r.active)||r.active.some(a=>!DEF[a.type]))return null;return r}catch(e){return null}}
+function resume(){const r=getRun();if(!r)return levelMenu();const st=ALL[r.si];setMap(st);const{px,py,active,...rest}=r;G=Object.assign(rest,{st,active:[]});G.active=active.map(a=>build(a.type,a.o,a.seed));P.x=px;P.y=py;if(!(px>10&&px<W-10&&py>25&&py<H-10)||hits(px,py)){P.x=SPOT.counter[0];P.y=SPOT.counter[1]}P.path=[];P.goal=null;state="play";hideAll();$("hud").classList.add("on");setMeters();toast("▶ 繼續 "+st.id+" "+st.bld+"・"+st.name)}
+addEventListener("pagehide",()=>autosave(true));document.addEventListener("visibilitychange",()=>{if(document.hidden)autosave(true)});
+function arrangeQ(q){q=shuffle(q);const out=[];let seenPkg=false;const later=[];q.forEach(x=>{if(x==="pickup"&&!seenPkg)later.push(x);else{out.push(x);if(x==="pkgIn"){seenPkg=true;out.push(...later.splice(0))}}});return out.concat(later)}
+function refill(){while(G.active.filter(t=>!t.dead).length<G.st.max&&G.queue.length&&!G.carry)spawn(G.queue.shift());G.active=G.active.filter(t=>!t.dead)}
+// ---- UI ----
+function hideAll(){document.querySelectorAll(".ov").forEach(o=>o.classList.remove("on"))}
+function show(id){hideAll();$(id).classList.add("on")}
+function modal(t,p,btns){state="modal";$("mdT").textContent=t;$("mdP").textContent=p;const b=$("mdB");b.innerHTML="";shuffle(btns).forEach(([txt,fn])=>{const e=document.createElement("button");e.textContent=txt;e.onclick=()=>{beep(700,.04);$("ovModal").classList.remove("on");state="play";fn();if(state==="play"&&G)autosave();};b.appendChild(e)});$("ovModal").classList.add("on")}
+let toastT=0;function toast(m){const e=$("toast");e.textContent=m;e.style.display="block";toastT=2.2}
+function levelMenu(){state="menu";const L=$("lvList");L.innerHTML="";let lw=0;ALL.forEach((st,i)=>{if(st.w!==lw){lw=st.w;L.insertAdjacentHTML("beforeend",`<p><b>類型${WNUM[lw]}　${WNAME[lw]}</b></p>`)}const open=i===0||save.cleared[ALL[i-1].id];const best=save.best[st.id];const b=document.createElement("button");
+ if(open){b.innerHTML=`<span class=lv><span>${st.id} ${st.bld}・${st.name}｜${st.night?"🌙晚班":"☀早班"}${save.cleared[st.id]?" ✅":""}</span><span>${best?"最佳 "+best.g+" "+best.s:""}</span></span>`;b.onclick=()=>startLevel(i)}else{b.disabled=true;b.textContent="🔒 "+st.id+" "+st.bld+"・"+st.name}L.appendChild(b)});
+ WORLDS.forEach(([n,nm])=>{const b=document.createElement("button");b.disabled=true;b.textContent="🔒 類型"+WNUM[n]+" "+nm+"（製作中）";L.appendChild(b)});show("ovLevels")}
+function titleScreen(){state="title";$("hud").classList.remove("on");const r=getRun();const c=$("bCont");if(r&&ALL[r.si]){c.style.display="block";c.textContent="⏯ 繼續遊戲（"+ALL[r.si].id+" "+ALL[r.si].bld+"・"+ALL[r.si].name+"，已完成 "+r.log.length+" 件）"}else c.style.display="none";show("ovTitle")}
+$("bCont").onclick=resume;$("bNewYes").onclick=()=>{clearRun();levelMenu()};$("bNewNo").onclick=titleScreen;
+$("bStart").onclick=()=>getRun()?show("ovConfirm"):levelMenu();$("bHow").onclick=()=>show("ovHow");$("bHowBack").onclick=titleScreen;$("bLvBack").onclick=titleScreen;
+function pause(){if(state!=="play")return;state="pause";show("ovPause")}
+$("bPause").onclick=pause;$("bResume").onclick=()=>{hideAll();state="play"};$("bQuit").onclick=()=>{$("hud").classList.remove("on");state="menu";levelMenu()};
+function endShift(){state="report";clearRun();$("hud").classList.remove("on");$("prompt").style.display="none";const st=G.st,si=G.si;
+ const n=G.log.length||1,avg=G.log.reduce((a,b)=>a+b.stars,0)/n;const fat=G.en<20?-5:0;
+ const score=Math.max(0,Math.round(avg/3*60+G.sat*.2+G.com*.2+fat-G.prioMiss*2));const g=score>=88?"S":score>=75?"A":score>=60?"B":"C";
+ save.cleared[st.id]=true;const b=save.best[st.id];if(!b||score>b.s)save.best[st.id]={g,s:score};persist();const nx=ALL[si+1];
+ const quip={S:M.boss+"：「明年尾牙你坐主桌！」",A:"住戶在群組幫你按讚 👍",B:"還行，主任說繼續加油。",C:"保全公司打電話來「關心」了…"}[g];
+ $("report").innerHTML=`<h2>交班報告｜${st.id} ${st.bld}・${st.name}（${st.night?"晚班":"早班"}）</h2><p class=grade>${g}</p><p style="text-align:center">總分 ${score}｜${quip}</p>
+ <p>住戶滿意度 ${G.sat}｜管委會評價 ${G.com}｜精神 ${Math.round(G.en)}｜任務平均 ${avg.toFixed(1)} ⭐｜順序失誤 ${G.prioMiss}</p><table>${G.log.map(l=>`<tr><td>${l.name}</td><td>${"⭐".repeat(l.stars)||"❌"}</td><td>${l.msg}</td></tr>`).join("")}</table>
+ <p>${nx?"✅ 已解鎖 "+nx.id+" "+nx.bld+"・"+nx.name:"🎉 目前所有關卡全破！類型三 百貨公司製作中"}</p>`;
+ const mk=(t,f,c)=>{const e=document.createElement("button");e.textContent=t;e.onclick=f;if(c)e.className=c;$("report").append(e)};
+ if(nx)mk("▶ 下一關 "+nx.id,()=>startLevel(si+1));mk("再玩一次",()=>startLevel(si),"alt");mk("關卡選單",levelMenu,"alt");show("ovReport");beep(990,.3,"triangle")}
+// ---- input ----
+const cv=$("c"),ctx=cv.getContext("2d");const keys={};let actPressed=false;
+addEventListener("keydown",e=>{keys[e.key.toLowerCase()]=true;if([" ","e","enter"].includes(e.key.toLowerCase()))actPressed=true;if(e.key==="Escape"||e.key==="p")state==="pause"?($("bResume").onclick()):pause();if(e.key.startsWith("Arrow")||e.key===" ")e.preventDefault()});
+addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false});
+const joy={x:0,y:0};
+const GS=15,GW=Math.ceil(W/GS),GH=Math.ceil(H/GS);
+function free(cx,cy){const x=cx*GS+GS/2,y=cy*GS+GS/2;return cx>=0&&cy>=0&&cx<GW&&cy<GH&&x>10&&x<W-10&&y>25&&y<H-10&&!hits(x,y)}
+function findPath(tx,ty){const sx=Math.floor(P.x/GS),sy=Math.floor(P.y/GS);let ex=Math.floor(tx/GS),ey=Math.floor(ty/GS);
+ if(!free(ex,ey)){let best=null,bd=1e9;for(let dx=-6;dx<=6;dx++)for(let dy=-6;dy<=6;dy++)if(free(ex+dx,ey+dy)&&dx*dx+dy*dy<bd){bd=dx*dx+dy*dy;best=[ex+dx,ey+dy]}if(!best)return[];[ex,ey]=best}
+ const prev=new Map(),k=(x,y)=>y*GW+x,q=[[sx,sy]];prev.set(k(sx,sy),-1);
+ while(q.length){const[x,y]=q.shift();if(x===ex&&y===ey)break;for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const nx=x+dx,ny=y+dy;if(!free(nx,ny)||prev.has(k(nx,ny)))continue;if(dx&&dy&&(!free(x+dx,y)||!free(x,y+dy)))continue;prev.set(k(nx,ny),k(x,y));q.push([nx,ny])}}
+ if(!prev.has(k(ex,ey)))return[];const path=[];let c=k(ex,ey);while(c!==-1&&c!==k(sx,sy)){path.unshift([c%GW*GS+GS/2,Math.floor(c/GW)*GS+GS/2]);c=prev.get(c)}if(path.length)path[path.length-1]=hits(tx,ty)?path[path.length-1]:[tx,ty];return path}
+function toWorld(sx,sy){return rot?[(sy-oy)/scale,H-(sx-ox)/scale]:[(sx-ox)/scale,(sy-oy)/scale]}
+function toScreen(wx,wy){return rot?[ox+(H-wy)*scale,oy+wx*scale]:[ox+wx*scale,oy+wy*scale]}
+function tapAt(sx,sy){if(!G||state!=="play")return;const[wx,wy]=toWorld(sx,sy);let tgt=null,bd=45;
+ G.active.forEach(t=>{if(t.dead)return;const[x,y]=SPOT[t.spot];for(const[px,py]of[[x,y],[x,y-34],[x+18,y]]){const d=Math.hypot(px-wx,py-wy);if(d<bd){bd=d;tgt=t}}});
+ if(!tgt&&allDone()&&Math.hypot(SPOT.counter[0]-wx,SPOT.counter[1]-wy)<60)tgt="off";
+ P.goal=tgt;const dest=tgt?(tgt==="off"?SPOT.counter:SPOT[tgt.spot]):[wx,wy];P.path=findPath(dest[0],dest[1]);beep(500,.03)}
+cv.addEventListener("pointerdown",e=>{e.preventDefault();tapAt(e.clientX,e.clientY)});
+function allDone(){return G&&!G.queue.length&&!G.active.some(t=>!t.dead)&&!G.carry}
+// ---- render ----
+let scale=1,ox=0,oy=0,DPR=1,rot=false;
+function resize(){DPR=Math.min(2,devicePixelRatio||1);cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;rot=innerHeight>innerWidth*1.15;const top=rot?52:(innerWidth<700?70:40),bot=rot?110:0,mw=rot?H:W,mh=rot?W:H;scale=Math.min(innerWidth/mw,(innerHeight-top-bot)/mh);ox=(innerWidth-mw*scale)/2;oy=top+((innerHeight-top-bot)-mh*scale)/2}
+addEventListener("resize",resize);resize();
+function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h)}
+function up(x,y,f){ctx.save();ctx.translate(x,y);if(rot)ctx.rotate(-Math.PI/2);f();ctx.restore()}
+function T(s,x,y,c="#fff",sz=13){up(x,y-sz*.35,()=>{ctx.fillStyle=c;ctx.font=`bold ${sz}px sans-serif`;ctx.textAlign="center";ctx.fillText(s,0,sz*.35)})}
+function person(x0,y0,c,hat){up(x0,y0,()=>{const x=0,y=0;R(x-7,y-4,14,14,c);ctx.fillStyle="#f5cba7";ctx.beginPath();ctx.arc(x,y-10,7,0,7);ctx.fill();if(hat){R(x-8,y-19,16,5,"#1f3a60");R(x-5,y-22,10,4,"#1f3a60")}R(x-6,y+10,4,5,"#333");R(x+2,y+10,4,5,"#333")})}
+function drawMap(time){const m=M;R(0,0,W,H,m.bg);if(m.bg2)for(let i=0;i<W;i+=24)for(let j=0;j<545;j+=24)if((i+j)%48===0)R(i,j,24,24,m.bg2);
+ R(0,545,W,55,"#6b6b6b");for(let i=0;i<W;i+=60)R(i,570,30,4,"#eee");
+ m.r.forEach(([x,y,w,h,c,l,lc,so])=>{R(x,y,w,h,c);if(so){R(x,y+h-4,w,4,"#0003");if(w>60&&h>50&&/棟/.test(l||""))for(let i=x+15;i<x+w-15;i+=30)R(i,y+15,16,16,"#fff8")}});
+ (m.trees||[]).forEach(([x,y])=>{ctx.fillStyle="#3e7d2a";ctx.beginPath();ctx.arc(x,y,16,0,7);ctx.fill()});
+ (m.elevs||[]).forEach(([x,y])=>{R(x,y,36,44,"#c7ced5");R(x+17,y,2,44,"#8a939b")});
+ (m.cars||[]).forEach(([x,y],i)=>{R(x,y,30,50,["#c0392b","#2c3e50","#ecf0f1","#f1c40f"][i%4]);R(x+4,y+8,22,10,"#9fd3ff")});
+ if(m.gates){const[x,y,n]=m.gates;for(let i=0;i<n;i++){R(x+i*36,y,6,20,"#555");R(x+i*36+6,y+6,22,5,"#4fc3f7")}T("門禁閘門",x+n*18,y-8,"#333",11)}
+ if(m.cctv){const[x,y]=m.cctv;for(let i=0;i<3;i++)R(x+i*38,y,30,18,(Math.floor(time/700)+i)%3?"#2ecc71":"#1abc9c")}
+ if(m.stage){const[x,y]=m.stage;R(x,y,440,22,"#ffd27a");for(let i=0;i<8;i++){ctx.fillStyle="#a1887f";ctx.beginPath();ctx.arc(x+30+i*55,y+65,12,0,7);ctx.fill()}}
+ (m.tripods||[]).forEach(([x,y])=>{R(x,y,8,18,"#333");R(x-4,y-6,16,8,"#111")});
+ if(m.chand){const[x,y]=m.chand;ctx.fillStyle="#fff3b0aa";ctx.beginPath();ctx.arc(x,y,40,0,7);ctx.fill();ctx.fillStyle="#ffd54f";ctx.beginPath();ctx.arc(x,y,12,0,7);ctx.fill()}
+ m.r.forEach(([x,y,w,h,c,l,lc])=>{if(l){const ty=m.elevs&&/電梯/.test(l)?y+h+(y<100?-4:-2)-h/2+h/2-6:y+h/2;T(l,x+w/2,ty,lc||"#333",w<90?11:13)}});
+ // outer wall / fence (solid)
+ const fc=WORLD===2?"#5f6a75":"#8a6d4b";R(0,0,W,14,fc);R(0,0,14,545,fc);R(W-14,0,14,545,fc);R(0,537,W,8,fc);
+ if(m.gate){const[x,y,w]=m.gate;R(x,y,w,8,"#d9c27a");for(let i=x;i<x+w;i+=8)R(i,y,3,8,"#555");T(WORLD===2?"大門":"大門",x+w/2,y+22,"#fff",12)}
+ if(m.lockGate){const[x,y,w]=m.lockGate;R(x,y,w,8,"#c0392b");T("正門（夜間上鎖）",x+w/2,y+22,"#fff",12)}
+ if(m.barrier){const[x,y]=m.barrier;R(x,y,8,20,"#333");R(x+8,y+3,70,6,"#e53935");for(let i=x+15;i<x+75;i+=16)R(i,y+3,8,6,"#fff");T("車道",x+40,y-6,"#333",11)}
+ ["P1","P2","P3","P4"].forEach(p=>{if(!SPOT[p])return;const[x,y]=SPOT[p];ctx.strokeStyle="#555";ctx.lineWidth=2;ctx.strokeRect(x-8,y-8,16,16);T(p,x,y+4,"#555",10)});
+ if(G&&G.night){R(0,0,W,H,"rgba(10,20,60,.22)")}
+ T(G&&G.st?G.st.id+" "+G.st.bld:"",W-70,560,"#fff",12)}
+function draw(time){ctx.setTransform(DPR,0,0,DPR,0,0);R(0,0,innerWidth,innerHeight,"#1d2433");rot?ctx.setTransform(0,DPR*scale,-DPR*scale,0,DPR*(ox+H*scale),DPR*oy):ctx.setTransform(DPR*scale,0,0,DPR*scale,DPR*ox,DPR*oy);drawMap(time);
+ if(G&&state!=="title"){G.active.forEach(t=>{if(t.dead)return;const[x,y]=SPOT[t.spot];if(t.npc){const bob=Math.sin(time/300+t.id*9)*1.5;person(x+18,y+bob,t.npc)}
+  const by=y-34+Math.sin(time/200)*3;ctx.fillStyle=t.pri===3?"#e53935":t.pri===2?"#ffd600":"#e0e0e0";ctx.beginPath();ctx.arc(x,by,t.pri===3?11:9,0,7);ctx.fill();ctx.strokeStyle="#0006";ctx.lineWidth=1.5;ctx.stroke();T("!",x,by,t.pri===3?"#fff":"#333",14)});
+  const bob=G.moving?Math.sin(time/80)*1.5:0;person(P.x,P.y+bob,"#2c3e50",true);if(G.carry)R(P.x-6,P.y-34,12,10,"#c49a6c")}
+ ctx.setTransform(1,0,0,1,0,0)}
+// ---- loop ----
+function hits(x,y){return SOLID.some(([a,b,w,h])=>x>a-6&&x<a+w+6&&y>b-4&&y<b+h+12)}
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+ if(toastT>0){toastT-=dt;if(toastT<=0)$("toast").style.display="none"}
+ if(G&&state==="play"){refill();let dx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+joy.x,dy=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0)+joy.y;let m=Math.hypot(dx,dy);if(m>.1){P.path=[];P.goal=null}else if(P.path&&P.path.length){const[tx,ty]=P.path[0];const ddx=tx-P.x,ddy=ty-P.y,dd=Math.hypot(ddx,ddy);if(dd<4){P.path.shift()}else{dx=ddx/dd;dy=ddy/dd;m=1;const sp=CONFIG.playerSpeed*(G.en<25?.7:1)*dt;if(sp>=dd){P.x=tx;P.y=ty;P.path.shift();dx=dy=0;m=0;G.moving=true}}}
+  G.moving=m>.1||G.moving&&P.path.length>0;
+  if(m>.1){const ox0=P.x,oy0=P.y;if(m>1){dx/=m;dy/=m}const sp=CONFIG.playerSpeed*(G.en<25?.7:1)*dt;const nx=Math.max(10,Math.min(W-10,P.x+dx*sp)),ny=Math.max(25,Math.min(H-10,P.y+dy*sp));if(!hits(nx,P.y))P.x=nx;if(!hits(P.x,ny))P.y=ny;G.en=clamp(G.en-dt*.15);if(Math.hypot(P.x-ox0,P.y-oy0)<.01&&P.path.length)P.path.shift();if(redPending()){G.moved+=Math.hypot(P.x-ox0,P.y-oy0);if(G.moved>70){G.moved=0;G.sat=clamp(G.sat-1);checkFire()}}}
+  if(P.goal&&!P.path.length&&state==="play"){const g=P.goal;P.goal=null;if(g==="off"){if(Math.hypot(SPOT.counter[0]-P.x,SPOT.counter[1]-P.y)<60)endShift()}else if(!g.dead&&Math.hypot(SPOT[g.spot][0]-P.x,SPOT[g.spot][1]-P.y)<60)g.act(g)}
+  if(state!=="play"){actPressed=false;draw(now);requestAnimationFrame(loop);return}
+  let near=null,nd=55;G.active.forEach(t=>{if(t.dead)return;const[x,y]=SPOT[t.spot],d=Math.hypot(x-P.x,y-P.y);if(d<nd){nd=d;near=t}});
+  const ad=allDone();
+  const pr=$("prompt");if(near){pr.style.display="block";pr.textContent="按 E 或點一下處理："+near.label}else if(ad){pr.style.display="block";pr.textContent="任務都處理完了！回"+M.post+"按 E 下班打卡"}else pr.style.display="none";
+  if(actPressed){if(near)near.act(near);else if(ad&&Math.hypot(SPOT.counter[0]-P.x,SPOT.counter[1]-P.y)<60)endShift()}
+  $("clock").textContent=G.st.id+" "+(G.night?"🌙":"☀")+fmtTime(G.clock)+"｜完成 "+G.log.length+"/"+(G.log.length+G.queue.length+G.active.filter(t=>!t.dead).length);
+  $("tasks").innerHTML="<b>📋 待辦（不限時，依輕重緩急）</b>"+G.active.filter(t=>!t.dead).slice().sort((a,b)=>b.pri-a.pri).map(t=>`<div><span class=${t.pri===3?"r":t.pri===2?"y":"g"}>●</span> ${t.label}${t.out?"（外人）":""}</div>`).join("")+(G.queue.length?`<div style="opacity:.7">…還有 ${G.queue.length} 件</div>`:"")+(ad?"<div>✅ 可以下班了</div>":"");setMeters()}
+ actPressed=false;draw(now);requestAnimationFrame(loop)}
+titleScreen();requestAnimationFrame(loop);
+window.__game={get G(){return G},P,get SPOT(){return SPOT},autosave,snapshot,get state(){return state},endShift,spawn:(t,o)=>spawn(t,o),toScreen,get save(){return save}};
+</script></body></html>
